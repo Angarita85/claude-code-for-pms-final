@@ -24,6 +24,12 @@ prompt library built from your own questions.
 
 ### 1.
 
+what do you suggest my first three follow up actions be as I start this new role?
+
 ### 2.
 
+What questions should I be asking to each of these stakeholders?
+
 ### 3.
+
+What insights or outcomes would be important to make a strong impression to my team and leadership as I start this role?
