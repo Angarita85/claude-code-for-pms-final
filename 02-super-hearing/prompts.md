@@ -16,6 +16,12 @@ prompt library built from your own questions.
 
 ### 1.
 
+Read every support ticket in Rook's database. Same treatment as before: group them, tell me how many are in each group, and quote one line from each.
+
 ### 2.
 
+yes can you run the ping analysis?
+
 ### 3.
+
+You've now read both piles. Where do they disagree? What's loud in the interviews but rare in the tickets, and what's all over the tickets that nobody brought up in the interviews?

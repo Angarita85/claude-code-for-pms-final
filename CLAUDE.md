@@ -108,3 +108,10 @@ Module 1 session notes:
 - Possible middle path on 4.2: if the data blames the timeout, change only the timeout and keep the proximity change, instead of choosing between revert and keep.
 - Drafted questions for the EM, staff engineer, Director and support lead (only in the chat, not saved to a file yet).
 - Still to do: no data pulled yet. Next step is to query `rook-database` for acceptance trends and read `00-rook/feedback/`. The `rook-wiki` team directory should give the people's names.
+
+Module 2 session notes:
+- Sources read: 4 handler interviews (wiki > Research > Customer interviews, 2–5 Sep), all 147 `support_tickets`, `pings`/`callouts`/`responders` tables, and `00-rook/code/dispatch-routing/`. The database only covers 29 Jun–6 Sep 2026, so the seasonal year-over-year test needs older data from the EM.
+- Finding: acceptance fell from 76.6% to 64.0% after 4.2, and nearly all of that is expired pings (2.3% → 18.0%). Declines went down. The timeout cut (90s → 60s, `config.py`) is the main cause, not the proximity weights. Callouts nobody took roughly doubled.
+- Finding: Farlight, The Undertow, Vesper and Meteor Mite fell from ~12 pings/week to ~1. In the code, an expired ping counts as a decline (−0.12 vs +0.08 for an acceptance) and the score never recovers on its own (2019 TODO in `history.py`). Once their score drops, neighbours outrank them in their own areas. The late-August "recovery" is partly the system routing around them.
+- Ticket volume tracks who writes in, not who's hurt worst: the 4 interviewed handlers filed 1 ticket, and Vesper and Mite have 0. Missed callouts are the one problem both sources back strongly. Filter persistence: mostly small, but silent resets cause real mistakes.
+- Proposed fix to discuss with the EM and staff engineer (instead of a full revert): restore the 90s timeout, stop penalising expiries as heavily as declines, and add score decay. Still open: why those four answered slowly in the first place, and whether the running code matches the repo.
