@@ -15,7 +15,25 @@ prompt library built from your own questions.
 ---
 
 ### 1.
+Within the repo or the notion notebook, is there any data around the callout history that has ping information?
 
 ### 2.
+If i had to put one number in front of  the director of product to tell the story, what would it be?
 
 ### 3.
+How can I be sure this number is accurate?
+
+### 4.
+Compare the support tickets against the pings. Do they agree with each other? When did people start writing in, and when do the numbers actually move?
+
+### 5.
+Can you tell me more about Farlight? What happened to them? Break it down week by week
+
+### 6.
+Remind me was farlight part of the interviews as wel?
+
+### 7.
+At what point was there an opportunity to escalate that something was going wrong for farlight?
+
+### 8.
+If I'd only asked for the number, not the rows, what would I have missed?
