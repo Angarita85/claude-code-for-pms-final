@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quiet Responder Prototype</title>
+<style>
+  :root {
+    --bg: #f4f3ef;
+    --surface: #ffffff;
+    --surface-2: #f7f6f2;
+    --ink: #1d1d1b;
+    --ink-2: #5b5a55;
+    --line: #dedcd4;
+    --accent: #2f5bd3;
+    --accent-ink: #ffffff;
+    --warn-bg: #fff4cc;
+    --warn-line: #e3b505;
+    --warn-ink: #6b5200;
+    --ok-bg: #e3f4e6;
+    --ok-ink: #1f6a32;
+    --busy: #c2410c;
+    --console-bg: #fbfbfa;
+    --phone-bg: #111318;
+    --phone-screen: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17171a;
+      --surface: #212126;
+      --surface-2: #2a2a30;
+      --ink: #ecebe7;
+      --ink-2: #a9a8a2;
+      --line: #3a3a41;
+      --accent: #7c9bff;
+      --accent-ink: #0d1020;
+      --warn-bg: #3a3112;
+      --warn-line: #c99a05;
+      --warn-ink: #f5d76e;
+      --ok-bg: #173022;
+      --ok-ink: #8fd6a2;
+      --busy: #fb923c;
+      --console-bg: #1c1c20;
+      --phone-bg: #000000;
+      --phone-screen: #1c1c20;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #17171a; --surface: #212126; --surface-2: #2a2a30; --ink: #ecebe7; --ink-2: #a9a8a2;
+    --line: #3a3a41; --accent: #7c9bff; --accent-ink: #0d1020; --warn-bg: #3a3112; --warn-line: #c99a05;
+    --warn-ink: #f5d76e; --ok-bg: #173022; --ok-ink: #8fd6a2; --busy: #fb923c; --console-bg: #1c1c20;
+    --phone-bg: #000000; --phone-screen: #1c1c20;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  button { font: inherit; cursor: pointer; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 16px 48px; }
+  header h1 { font-size: 22px; margin: 0 0 4px; }
+  header p { margin: 0; color: var(--ink-2); max-width: 70ch; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; margin: 20px 0 24px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--surface); }
+  .seg button { border: 0; background: transparent; color: var(--ink-2); padding: 6px 14px; border-radius: 999px; }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+  .controls label { color: var(--ink-2); font-size: 14px; }
+  .hint { color: var(--ink-2); font-size: 13px; }
+
+  .stage { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+  @media (max-width: 900px) { .stage { grid-template-columns: minmax(0, 1fr); } }
+  .where { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); margin: 0 0 8px; }
+  .caption { color: var(--ink-2); font-size: 14px; margin: 10px 2px 0; }
+
+  /* Console */
+  .console { background: var(--console-bg); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; box-shadow: 0 6px 24px rgba(0,0,0,.06); }
+  .console-bar { display: flex; justify-content: space-between; gap: 8px; padding: 10px 14px; background: var(--surface-2); border-bottom: 1px solid var(--line); font-size: 13px; color: var(--ink-2); }
+  .console-bar b { color: var(--ink); }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 14px; }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px; position: relative; }
+  .card h3 { margin: 0; font-size: 16px; }
+  .card .sub { color: var(--ink-2); font-size: 13px; }
+  .big { font-size: 28px; font-weight: 650; margin: 10px 0 0; }
+  .big small { font-size: 13px; font-weight: 400; color: var(--ink-2); }
+  .bars { display: flex; gap: 6px; align-items: flex-end; height: 48px; margin: 12px 0 4px; }
+  .bars div { flex: 1; background: var(--line); border-radius: 3px 3px 0 0; position: relative; }
+  .bars div.now { background: var(--ink-2); }
+  .bars-x { display: flex; gap: 6px; font-size: 11px; color: var(--ink-2); }
+  .bars-x span { flex: 1; text-align: center; }
+  .flag {
+    display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; margin-top: 12px;
+    background: var(--warn-bg); border: 1px solid var(--warn-line); color: var(--warn-ink);
+    border-radius: 6px; padding: 8px 10px; font-size: 13px;
+  }
+  .flag .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--warn-line); flex: none; }
+  .flag .chev { margin-left: auto; }
+  .note-busy { margin-top: 12px; font-size: 13px; color: var(--busy); }
+  .detail { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; font-size: 14px; }
+  .detail ul { margin: 6px 0 12px; padding-left: 18px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .btn { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 6px; padding: 7px 12px; font-size: 14px; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .done { background: var(--ok-bg); color: var(--ok-ink); border-radius: 6px; padding: 8px 10px; font-size: 13px; margin-top: 12px; display: flex; gap: 8px; align-items: center; }
+  .done button { margin-left: auto; background: none; border: 0; color: inherit; text-decoration: underline; padding: 0; }
+  .compose { margin-top: 10px; }
+  .compose textarea { width: 100%; min-height: 70px; border: 1px solid var(--line); border-radius: 6px; padding: 8px; background: var(--surface-2); color: var(--ink); font: inherit; font-size: 14px; }
+
+  /* Console tabs and Mite's story */
+  .tabs { display: flex; gap: 4px; align-items: center; }
+  .tabs b { margin-right: 6px; }
+  .tabs button { border: 0; background: none; color: var(--ink-2); padding: 3px 10px; border-radius: 6px; font-size: 13px; }
+  .tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 0 0 1px var(--line); }
+  .open-story { margin-top: 10px; background: none; border: 0; padding: 0; color: var(--accent); font-size: 13px; }
+  .story { padding: 14px; }
+  .story-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .story-head h3 { margin: 0; font-size: 17px; }
+  .stepper { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+  .stepper .btn { padding: 4px 10px; }
+  .stepper .btn:disabled { opacity: .4; cursor: default; }
+  .weeks { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin: 14px 0 6px; }
+  .wk { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 8px 4px 6px; display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--ink); }
+  .wk[aria-current="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .wk .pair { display: flex; gap: 4px; align-items: flex-end; height: 64px; }
+  .wk .m { width: 14px; background: var(--accent); border-radius: 2px 2px 0 0; }
+  .wk .g { width: 14px; background: var(--line); border-radius: 2px 2px 0 0; }
+  .wk small { font-size: 11px; color: var(--ink-2); }
+  .wk .rel { font-size: 10px; color: var(--busy); min-height: 14px; }
+  .legend { display: flex; gap: 14px; font-size: 12px; color: var(--ink-2); margin-bottom: 12px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0 0 12px; }
+  @media (max-width: 560px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px; text-align: center; }
+  .stat b { display: block; font-size: 20px; }
+  .stat span { font-size: 12px; color: var(--ink-2); }
+  .story-text { margin: 0 0 14px; }
+
+  /* Phone */
+  .phone { width: 300px; max-width: 100%; margin: 0 auto; background: var(--phone-bg); border-radius: 38px; padding: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.18); }
+  .screen { background: var(--phone-screen); border-radius: 28px; min-height: 560px; overflow: hidden; display: flex; flex-direction: column; }
+  .status { display: flex; justify-content: space-between; padding: 10px 20px 6px; font-size: 12px; font-weight: 600; }
+  .app-head { padding: 6px 18px 12px; border-bottom: 1px solid var(--line); }
+  .app-head h4 { margin: 0; font-size: 18px; }
+  .app-head .sub { color: var(--ink-2); font-size: 13px; }
+  .pill { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); margin-top: 6px; }
+  .pill.on { background: var(--ok-bg); color: var(--ok-ink); }
+  .app-body { padding: 14px 16px; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+  .empty { color: var(--ink-2); text-align: center; margin: 60px 10px; font-size: 14px; }
+  .notif { width: 100%; text-align: left; background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px; padding: 12px; color: var(--ink); }
+  .notif b { display: block; font-size: 14px; }
+  .notif span { font-size: 13px; color: var(--ink-2); }
+  .notif .tap { display: block; margin-top: 6px; font-size: 12px; color: var(--accent); }
+  .meter { height: 8px; background: var(--surface-2); border-radius: 999px; overflow: hidden; border: 1px solid var(--line); }
+  .meter div { height: 100%; background: var(--accent); transition: width .5s ease; }
+  .row { display: flex; justify-content: space-between; font-size: 14px; }
+  .muted { color: var(--ink-2); font-size: 13px; }
+  .back { background: none; border: 0; color: var(--accent); padding: 0; font-size: 14px; }
+  .phone .btn.primary { width: 100%; padding: 12px; border-radius: 12px; font-size: 15px; }
+
+  /* Rules */
+  .rules { margin-top: 32px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+  .rules h2 { font-size: 16px; margin: 0 0 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); }
+  th { color: var(--ink-2); font-weight: 500; }
+  td.hl { background: var(--warn-bg); color: var(--warn-ink); font-weight: 600; }
+  .table-scroll { overflow-x: auto; }
+  footer { margin-top: 16px; color: var(--ink-2); font-size: 13px; }
+
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); opacity: 0; background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 14px; transition: all .25s ease; pointer-events: none; max-width: calc(100% - 32px); }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>When a responder goes quiet: clickable prototype</h1>
+    <p>Two places this happens: Kip's console and Farlight's phone. Switch between <b>Today</b> and <b>After the change</b>, then click the yellow flag, the missed-call notice and the buttons.</p>
+  </header>
+
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Which version">
+      <button id="mode-today" aria-pressed="false">Today</button>
+      <button id="mode-after" aria-pressed="true">After the change</button>
+    </div>
+    <div id="delivery-control">
+      <label>Did Farlight's 9:14 call reach the phone?</label>
+      <div class="seg" role="group" aria-label="Delivery">
+        <button id="deliv-yes" aria-pressed="true">Yes, confirmed</button>
+        <button id="deliv-no" aria-pressed="false">Can't confirm</button>
+      </div>
+    </div>
+    <button class="btn" id="reset">Start over</button>
+  </div>
+
+  <div class="stage">
+    <!-- Console -->
+    <section>
+      <p class="where">Where: Dispatch console, Kip's shift (handler for Eastgate)</p>
+      <div class="console">
+        <div class="console-bar">
+          <div class="tabs" role="tablist"><b>Rook Dispatch</b>
+            <button id="tab-cov" role="tab" aria-selected="true">Coverage</button>
+            <button id="tab-mite" role="tab" aria-selected="false">Meteor Mite</button>
+          </div>
+          <span id="console-clock">Kip · Thu 20 Aug, 23:12</span>
+        </div>
+
+        <!-- Meteor Mite's story, as Kip would see it -->
+        <div class="story" id="view-mite" hidden>
+          <div class="story-head">
+            <div><h3>Meteor Mite</h3><div class="sub">Eastgate · Kip's responder · the five weeks around release 4.2</div></div>
+            <div class="stepper">
+              <button class="btn" id="wk-prev" aria-label="Previous week">‹</button>
+              <span id="wk-label"></span>
+              <button class="btn" id="wk-next" aria-label="Next week">›</button>
+            </div>
+          </div>
+          <div class="weeks" id="weeks"></div>
+          <div class="legend"><span><i style="background:var(--accent)"></i>Meteor Mite</span><span><i style="background:var(--line)"></i>The Gale (same area)</span></div>
+          <div class="stats" id="stats"></div>
+          <p class="story-text" id="story-text"></p>
+          <p class="where" id="kip-sees-label"></p>
+          <div class="card" id="kip-card"></div>
+        </div>
+
+        <div class="cards" id="view-cov">
+          <!-- Meteor Mite -->
+          <article class="card" id="card-mite">
+            <h3>Meteor Mite</h3>
+            <div class="sub">Eastgate · Available</div>
+            <p class="big">4 <small>calls this week</small></p>
+            <div class="bars" aria-label="Calls per week: 11, 10, 4">
+              <div style="height:92%"></div><div style="height:83%"></div><div class="now" style="height:33%"></div>
+            </div>
+            <div class="bars-x"><span>3 Aug</span><span>10 Aug</span><span>17 Aug</span></div>
+            <button class="open-story" id="open-story">See what happened to Meteor Mite, week by week ›</button>
+
+            <div class="after-only">
+              <button class="flag" id="mite-flag" aria-expanded="false">
+                <span class="dot"></span>
+                <span><b>Gone quiet:</b> 4 calls this week, usually 11. 2 recent calls ran out.</span>
+                <span class="chev" id="mite-chev">▸</span>
+              </button>
+              <div class="detail" id="mite-detail" hidden>
+                <b>Why Mite is getting fewer calls</b>
+                <ul>
+                  <li>2 of Mite's last 4 calls ran out after 60 seconds.</li>
+                  <li>Each one moved Mite lower in line for Eastgate.</li>
+                  <li>The Gale is getting Mite's share: 17 this week, usually 13.</li>
+                </ul>
+                <div class="actions" id="mite-actions">
+                  <button class="btn primary" id="send-next">Send Mite the next Eastgate call</button>
+                  <button class="btn" id="msg-mite">Message Mite</button>
+                </div>
+                <div class="compose" id="compose" hidden>
+                  <textarea id="compose-text">Hi Mite, nothing's broken. A couple of calls ran out before you could answer, so the system moved you down in line. The next Eastgate call is yours.</textarea>
+                  <div class="actions" style="margin-top:8px">
+                    <button class="btn primary" id="send-msg">Send</button>
+                    <button class="btn" id="cancel-msg">Cancel</button>
+                  </div>
+                </div>
+              </div>
+              <div class="done" id="mite-done" hidden>✓ Next Eastgate call goes to Mite first. <button id="undo-next">Undo</button></div>
+            </div>
+            <p class="caption today-only">No hint why. Kip can only say "hang in there."</p>
+          </article>
+
+          <!-- The Gale -->
+          <article class="card" id="card-gale">
+            <h3>The Gale</h3>
+            <div class="sub">Eastgate · On a call</div>
+            <p class="big">17 <small>calls this week</small></p>
+            <div class="bars" aria-label="Calls per week: 13, 15, 17">
+              <div style="height:62%"></div><div style="height:71%"></div><div class="now" style="height:81%"></div>
+            </div>
+            <div class="bars-x"><span>3 Aug</span><span>10 Aug</span><span>17 Aug</span></div>
+            <p class="note-busy after-only" id="gale-note">Busier than usual (13 a week). Getting some of Mite's calls.</p>
+            <p class="note-busy after-only" id="gale-relief" hidden>Next Eastgate call goes to Mite, giving The Gale a break.</p>
+            <p class="caption today-only">Busy, and worn out. The screen doesn't connect the two cards.</p>
+          </article>
+        </div>
+      </div>
+      <p class="caption">Kip doesn't handle Farlight (Linda Pruitt does), so this view shows Kip's own two responders.</p>
+    </section>
+
+    <!-- Phone -->
+    <section>
+      <p class="where">Where: Responder app, Farlight's phone (Uptown)</p>
+      <div class="phone">
+        <div class="screen">
+          <div class="status"><span>23:12</span><span>●●● 5G</span></div>
+
+          <!-- Home -->
+          <div id="ph-home">
+            <div class="app-head">
+              <h4>Rook</h4>
+              <div class="sub">Farlight · Uptown</div>
+              <span class="pill" id="avail-pill">Available</span>
+            </div>
+            <div class="app-body">
+              <div class="today-only">
+                <p class="empty">No calls right now.</p>
+                <p class="caption" style="text-align:center">The phone just went quiet. Nothing says a call was missed or why.</p>
+              </div>
+              <div class="after-only">
+                <button class="notif" id="notif">
+                  <b id="notif-title">You missed a call at 9:14</b>
+                  <span id="notif-body">It went to someone else after 60 seconds.</span>
+                  <span class="tap">Tap to see your calls ›</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Your calls -->
+          <div id="ph-calls" hidden>
+            <div class="app-head">
+              <button class="back" id="back">‹ Back</button>
+              <h4>Your calls</h4>
+              <div class="sub">Week of 17 Aug</div>
+            </div>
+            <div class="app-body">
+              <div class="row"><span>This week</span><b>3 calls</b></div>
+              <div class="row"><span>Your usual week</span><b>12 calls</b></div>
+              <p class="muted" id="why-text">You've had fewer calls because 2 recent calls ran out before you answered. That moved you down in line for Uptown.</p>
+              <div>
+                <div class="row"><span>Your place in line</span><span class="muted" id="meter-label">Low</span></div>
+                <div class="meter"><div id="meter" style="width:12%"></div></div>
+                <p class="muted" id="meter-note">Comes back a little each day, even without calls.</p>
+              </div>
+              <div style="margin-top:auto">
+                <button class="btn primary" id="available">I'm available</button>
+                <div class="done" id="avail-done" hidden>✓ You're back in line for Uptown. If you're closest, the next call comes to you first.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="rules">
+    <h2>The rules underneath (proposal for Wen to check)</h2>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>What happens</th><th>Today</th><th>Proposed</th></tr></thead>
+        <tbody>
+          <tr><td>Takes the call</td><td>+0.08</td><td>+0.08</td></tr>
+          <tr><td>Says no</td><td>−0.12</td><td>−0.12</td></tr>
+          <tr id="rule-confirmed"><td>Misses a call that reached the phone</td><td>−0.12</td><td>−0.04</td></tr>
+          <tr id="rule-unconfirmed"><td>Misses a call we can't confirm arrived</td><td>−0.12</td><td>0</td></tr>
+          <tr><td>Gets no calls for a while</td><td>Stays put forever</td><td>Moves back toward 0.5, about +0.02 a day</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>Prototype only, nothing here is live. Weekly numbers come from the Rook database (to 6 Sep 2026). Screen wording, the 9:14 time and the flag text are illustrations, not real messages.</footer>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const state = { mode: 'after', delivered: true, drawer: false, nextSent: false, composing: false, screen: 'home', available: false, view: 'cov', week: 0, acted: {} };
+
+  // Meteor Mite's real weekly calls (Rook database, pings table). The Gale is in the same area.
+  const MITE = [
+    { wk: '3 Aug', day: 'Thu 6 Aug', calls: 11, taken: 8, missed: 0, declined: 3, gale: 13,
+      text: 'A normal week. Mite took 8 of her 11 calls and missed none.' },
+    { wk: '10 Aug', day: 'Thu 13 Aug', calls: 10, taken: 4, missed: 4, declined: 2, gale: 15, release: true,
+      text: 'Release 4.2 ships on Wed 12 Aug. Calls now run out after 60 seconds instead of 90. Four of her calls run out, and each one costs her as much as saying no.' },
+    { wk: '17 Aug', day: 'Thu 20 Aug', calls: 4, taken: 1, missed: 2, declined: 1, gale: 17,
+      text: "She's lower in line now, so Eastgate calls go to others first. She gets only 4 calls, and 2 more run out." },
+    { wk: '24 Aug', day: 'Thu 27 Aug', calls: 2, taken: 0, missed: 1, declined: 1, gale: 20,
+      text: 'Just 2 calls. She has no way to climb back, because the system never gives points back on its own.' },
+    { wk: '31 Aug', day: 'Thu 3 Sep', calls: 1, taken: 0, missed: 1, declined: 0, gale: 21,
+      text: "One call all week, and it runs out. By 4 Sep she's texting Kip to ask if something is broken." },
+  ];
+  const USUAL = 11;
+
+  function kipCard(w, i, after) {
+    const head = `<h3>Meteor Mite</h3><div class="sub">Eastgate · Available</div><p class="big">${w.calls} <small>call${w.calls === 1 ? '' : 's'} this week</small></p>`;
+    if (!after) {
+      const note = i === 4 ? 'Nothing else on screen. Kip tells her to "hang in there."' : 'Nothing else on screen. Kip has no reason to look closer.';
+      return head + `<p class="caption">${note}</p>`;
+    }
+    if (w.missed <= 1 && w.calls >= USUAL / 2) {
+      return head + '<p class="caption">No warning. A normal week.</p>';
+    }
+    let flag, action, actionLabel;
+    if (w.calls >= USUAL / 2) {
+      flag = `<b>Calls running out:</b> ${w.missed} of her ${w.calls} calls ran out this week, usually 0 or 1.`;
+      action = 'check'; actionLabel = 'Check in with Mite';
+    } else {
+      flag = `<b>Gone quiet:</b> ${w.calls} call${w.calls === 1 ? '' : 's'} this week, usually ${USUAL}. ${w.missed} ran out.`;
+      action = 'send'; actionLabel = 'Send Mite the next Eastgate call';
+    }
+    const done = state.acted[i]
+      ? `<div class="done">✓ ${action === 'send' ? 'Next Eastgate call goes to Mite first.' : 'Message sent. Kip asked if her calls are coming through.'}</div>`
+      : `<div class="actions" style="margin-top:10px"><button class="btn primary" data-act="${i}">${actionLabel}</button></div>`;
+    const extra = i === 1 ? '<p class="caption">The first warning would show up the week 4.2 shipped, not three weeks later.</p>' : '';
+    return head + `<div class="flag" style="cursor:default"><span class="dot"></span><span>${flag}</span></div>` + done + extra;
+  }
+
+  function renderStory() {
+    const after = state.mode === 'after';
+    const i = state.week, w = MITE[i];
+    $('weeks').innerHTML = MITE.map((x, j) => `
+      <button class="wk" data-wk="${j}" aria-current="${j === i}" aria-label="Week of ${x.wk}: Mite ${x.calls} calls, The Gale ${x.gale}">
+        <span class="pair"><span class="m" style="height:${x.calls / 21 * 100}%"></span><span class="g" style="height:${x.gale / 21 * 100}%"></span></span>
+        <small>${x.wk}</small><span class="rel">${x.release ? '4.2 ships' : ''}</span>
+      </button>`).join('');
+    $('wk-label').textContent = `Week of ${w.wk}`;
+    $('wk-prev').disabled = i === 0;
+    $('wk-next').disabled = i === MITE.length - 1;
+    $('stats').innerHTML = [['Calls', w.calls], ['Took', w.taken], ['Ran out', w.missed], ['Said no', w.declined]]
+      .map(([k, v]) => `<div class="stat"><b>${v}</b><span>${k}</span></div>`).join('');
+    $('story-text').textContent = w.text + ` The Gale got ${w.gale}.`;
+    $('kip-sees-label').textContent = after ? `What Kip would see on ${w.day}` : `What Kip saw on ${w.day}`;
+    $('kip-card').innerHTML = kipCard(w, i, after);
+  }
+
+  function render() {
+    const after = state.mode === 'after';
+    $('mode-today').setAttribute('aria-pressed', !after);
+    $('mode-after').setAttribute('aria-pressed', after);
+    document.querySelectorAll('.after-only').forEach(el => el.hidden = !after);
+    document.querySelectorAll('.today-only').forEach(el => el.hidden = after);
+    $('delivery-control').hidden = !after;
+
+    $('deliv-yes').setAttribute('aria-pressed', state.delivered);
+    $('deliv-no').setAttribute('aria-pressed', !state.delivered);
+
+    // Kip's console
+    const story = state.view === 'mite';
+    $('tab-cov').setAttribute('aria-selected', !story);
+    $('tab-mite').setAttribute('aria-selected', story);
+    $('view-cov').hidden = story;
+    $('view-mite').hidden = !story;
+    $('console-clock').textContent = story ? `Kip · ${MITE[state.week].day}` : 'Kip · Thu 20 Aug, 23:12';
+    if (story) renderStory();
+    $('mite-flag').setAttribute('aria-expanded', state.drawer);
+    $('mite-chev').textContent = state.drawer ? '▾' : '▸';
+    $('mite-detail').hidden = !state.drawer || state.nextSent;
+    $('compose').hidden = !state.composing;
+    $('mite-actions').hidden = state.composing;
+    $('mite-done').hidden = !state.nextSent;
+    $('gale-note').hidden = state.nextSent;
+    $('gale-relief').hidden = !state.nextSent;
+
+    // Farlight's phone
+    if (state.delivered) {
+      $('notif-title').textContent = 'You missed a call at 9:14';
+      $('notif-body').textContent = 'It went to someone else after 60 seconds.';
+      $('why-text').textContent = "You've had fewer calls because 2 recent calls ran out before you answered. That moved you down in line for Uptown.";
+    } else {
+      $('notif-title').textContent = 'A call may not have reached you at 9:14';
+      $('notif-body').textContent = "We couldn't confirm your phone got it, so it doesn't count against you.";
+      $('why-text').textContent = "Some recent calls may not have reached your phone. Those don't count against you. We're looking into it.";
+    }
+    const onCalls = after && state.screen === 'calls';
+    $('ph-home').hidden = onCalls;
+    $('ph-calls').hidden = !onCalls;
+    $('available').hidden = state.available;
+    $('avail-done').hidden = !state.available;
+    $('meter').style.width = state.available ? '50%' : '12%';
+    $('meter-label').textContent = state.available ? 'Back to the middle' : 'Low';
+    $('meter-note').textContent = state.available ? 'Reset to 0.5. Missed calls now count less than saying no.' : 'Comes back a little each day, even without calls.';
+    $('avail-pill').classList.toggle('on', state.available);
+    $('avail-pill').textContent = state.available ? 'Available · back in line' : 'Available';
+
+    // Rules table: highlight the row the current call falls under
+    const showHl = after;
+    $('rule-confirmed').querySelectorAll('td')[2].classList.toggle('hl', showHl && state.delivered);
+    $('rule-unconfirmed').querySelectorAll('td')[2].classList.toggle('hl', showHl && !state.delivered);
+  }
+
+  let toastTimer;
+  function toast(msg) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+  }
+
+  $('mode-today').onclick = () => { state.mode = 'today'; render(); };
+  $('mode-after').onclick = () => { state.mode = 'after'; render(); };
+  $('deliv-yes').onclick = () => { state.delivered = true; render(); };
+  $('deliv-no').onclick = () => { state.delivered = false; render(); };
+
+  $('mite-flag').onclick = () => { state.drawer = !state.drawer; state.composing = false; render(); };
+  $('send-next').onclick = () => { state.nextSent = true; render(); toast('Next Eastgate call will go to Meteor Mite first'); };
+  $('undo-next').onclick = () => { state.nextSent = false; state.drawer = true; render(); };
+  $('msg-mite').onclick = () => { state.composing = true; render(); $('compose-text').focus(); };
+  $('cancel-msg').onclick = () => { state.composing = false; render(); };
+  $('send-msg').onclick = () => { state.composing = false; render(); toast('Message sent to Meteor Mite'); };
+
+  $('tab-cov').onclick = () => { state.view = 'cov'; render(); };
+  $('tab-mite').onclick = () => { state.view = 'mite'; render(); };
+  $('open-story').onclick = () => { state.view = 'mite'; state.week = 0; render(); };
+  $('wk-prev').onclick = () => { state.week = Math.max(0, state.week - 1); render(); };
+  $('wk-next').onclick = () => { state.week = Math.min(MITE.length - 1, state.week + 1); render(); };
+  $('view-mite').addEventListener('click', (e) => {
+    const wk = e.target.closest('[data-wk]');
+    if (wk) { state.week = +wk.dataset.wk; render(); return; }
+    const act = e.target.closest('[data-act]');
+    if (act) { state.acted[act.dataset.act] = true; render(); toast('Done. In the real console this would reach Meteor Mite.'); }
+  });
+
+  $('notif').onclick = () => { state.screen = 'calls'; render(); };
+  $('back').onclick = () => { state.screen = 'home'; render(); };
+  $('available').onclick = () => { state.available = true; render(); toast("Farlight is back in line for Uptown"); };
+
+  $('reset').onclick = () => {
+    Object.assign(state, { mode: 'after', delivered: true, drawer: false, nextSent: false, composing: false, screen: 'home', available: false, view: 'cov', week: 0, acted: {} });
+    render();
+  };
+
+  render();
+</script>
+</body>
+</html>
