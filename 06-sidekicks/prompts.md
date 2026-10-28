@@ -14,7 +14,19 @@ prompt library built from your own questions.
 ---
 
 ### 1.
+Make a skill called review-checklist. When I point it at a brief, it checks that the brief: names who owns it, says how we'll know it worked, keeps the same scope start to finish, and explains the problem before the fix.
 
 ### 2.
+what would be some good follow up questions for me to ask you?
 
 ### 3.
+Would the skill have caught the problems Helen’s three reviewers found in Module 5?
+
+### 4.
+How would I share this skill with other PMs on the team?
+
+### 5.
+What’s the difference between this skill and just asking you to review a brief?
+
+### 6.
+Schedule review-checklist to run every Monday morning, and let me know what it finds. Nothing needs to be ready for it to fire today. I'm setting the habit, not waiting on the result.
